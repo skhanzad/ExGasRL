@@ -3,88 +3,72 @@ import gymnasium as gym
 import numpy as np
 
 
-class BlackjackAgent:
-    def __init__(
-        self,
-        env: gym.Env,
-        learning_rate: float,
-        initial_epsilon: float,
-        epsilon_decay: float,
-        final_epsilon: float,
-        discount_factor: float = 0.95,
-    ):
-        """Initialize a Q-Learning agent.
+class LunarLandingAgent:
+    def __init__(self, env_name='LunarLander-v3', render_mode=None):
+        self.env = gym.make(env_name)  # Non-rendering env for training
+        self.eval_env = gym.make(env_name, render_mode=render_mode) if render_mode else None
 
-        Args:
-            env: The training environment
-            learning_rate: How quickly to update Q-values (0-1)
-            initial_epsilon: Starting exploration rate (usually 1.0)
-            epsilon_decay: How much to reduce epsilon each episode
-            final_epsilon: Minimum exploration rate (usually 0.1)
-            discount_factor: How much to value future rewards (0-1)
-        """
-        self.env = env
+        self.q_table = defaultdict(lambda: np.zeros(self.env.action_space.n))
+        self.alpha = 0.1  # Learning rate
+        self.gamma = 0.99  # Discount factor
+        self.epsilon = 0.1  # Exploration rate
 
-        # Q-table: maps (state, action) to expected reward
-        # defaultdict automatically creates entries with zeros for new states
-        self.q_values = defaultdict(lambda: np.zeros(env.action_space.n))
+        self.bins = np.linspace(-1, 1, 20)  # Example bins for discretization
 
-        self.lr = learning_rate
-        self.discount_factor = discount_factor  # How much we care about future rewards
+    def discretize(self, state):
+        """Discretize continuous state into bins for Q-table lookup."""
+        return tuple(np.digitize(s, self.bins) for s in state)
 
-        # Exploration parameters
-        self.epsilon = initial_epsilon
-        self.epsilon_decay = epsilon_decay
-        self.final_epsilon = final_epsilon
-
-        # Track learning progress
-        self.training_error = []
-
-    def get_action(self, obs: tuple[int, int, bool]) -> int:
-        """Choose an action using epsilon-greedy strategy.
-
-        Returns:
-            action: 0 (stand) or 1 (hit)
-        """
-        # With probability epsilon: explore (random action)
-        if np.random.random() < self.epsilon:
-            return self.env.action_space.sample()
-
-        # With probability (1-epsilon): exploit (best known action)
+    def choose_action(self, state):
+        state_key = self.discretize(state)
+        if np.random.rand() < self.epsilon:
+            return self.env.action_space.sample()  # Explore
         else:
-            return int(np.argmax(self.q_values[obs]))
+            return np.argmax(self.q_table[state_key])  # Exploit
 
-    def update(
-        self,
-        obs: tuple[int, int, bool],
-        action: int,
-        reward: float,
-        terminated: bool,
-        next_obs: tuple[int, int, bool],
-    ):
-        """Update Q-value based on experience.
+    def update_q_value(self, state, action, reward, next_state):
+        state_key = self.discretize(state)
+        next_state_key = self.discretize(next_state)
 
-        This is the heart of Q-learning: learn from (state, action, reward, next_state)
-        """
-        # What's the best we could do from the next state?
-        # (Zero if episode terminated - no future rewards possible)
-        future_q_value = (not terminated) * np.max(self.q_values[next_obs])
+        best_next_action = np.argmax(self.q_table[next_state_key])
+        td_target = reward + self.gamma * self.q_table[next_state_key][best_next_action]
+        td_error = td_target - self.q_table[state_key][action]
 
-        # What should the Q-value be? (Bellman equation)
-        target = reward + self.discount_factor * future_q_value
+        self.q_table[state_key][action] += self.alpha * td_error
 
-        # How wrong was our current estimate?
-        temporal_difference = target - self.q_values[obs][action]
+    def train(self, episodes=1000):
+        for episode in range(episodes):
+            state, _ = self.env.reset()
+            done = False
+            while not done:
+                action = self.choose_action(state)
+                next_state, reward, terminated, truncated, _ = self.env.step(action)
+                done = terminated or truncated
+                self.update_q_value(state, action, reward, next_state)
+                state = next_state
+            if episode % 100 == 0:
+                print(f"Episode {episode}")
 
-        # Update our estimate in the direction of the error
-        # Learning rate controls how big steps we take
-        self.q_values[obs][action] = (
-            self.q_values[obs][action] + self.lr * temporal_difference
-        )
+    def run(self, episodes=5):
+        if not self.eval_env:
+            self.eval_env = gym.make('LunarLander-v3', render_mode='human')
 
-        # Track learning progress (useful for debugging)
-        self.training_error.append(temporal_difference)
+        for episode in range(episodes):
+            state, _ = self.eval_env.reset()
+            done = False
+            total_reward = 0
 
-    def decay_epsilon(self):
-        """Reduce exploration rate after each episode."""
-        self.epsilon = max(self.final_epsilon, self.epsilon - self.epsilon_decay)
+            while not done:
+                state_key = self.discretize(state)
+                action = np.argmax(self.q_table[state_key])
+                next_state, reward, terminated, truncated, _ = self.eval_env.step(action)
+                done = terminated or truncated
+                total_reward += reward
+                state = next_state
+
+            print(f"Episode {episode + 1}, Total Reward: {total_reward}")
+
+    def close(self):
+        self.env.close()
+        if self.eval_env:
+            self.eval_env.close()

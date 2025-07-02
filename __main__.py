@@ -1,28 +1,22 @@
-from src.agents import BlackjackAgent, gym
+from src.models import LunarLandingModel
+from src.agents import LunarLandingAgent
+import gymnasium as gym
 
 
+def main():
+    # print(name for name, _ in gym.envs.registry.items())
+    # Initialize the agent and model
+    agent = LunarLandingAgent()
+    model = LunarLandingModel(input_size=8, hidden_size=64, output_size=4)
 
-def main():    # Example usage of the BlackjackAgent
-    env = gym.make("Blackjack-v1")
-    agent = BlackjackAgent(
-        env,
-        learning_rate=0.1,
-        initial_epsilon=1.0,
-        epsilon_decay=0.99,
-        final_epsilon=0.1,
-    )
+    # Train the agent
+    agent.train(episodes=1000)
 
-    obs, _ = env.reset()
-    done = False
+    # Run the agent in the environment
+    agent.run()
 
-    while not done:
-        action = agent.get_action(obs)
-        obs, reward, done, _, _ = env.step(action)
-        agent.update(obs, action, reward, done, None)
-
-
-    print(f"final Q-values: {agent.q_values}")
-    print("Training complete!")
+    # Close the environment
+    agent.close()
 
 
 if __name__ == "__main__":
