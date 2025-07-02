@@ -9,12 +9,12 @@ with open("requirements.txt", "r", encoding="utf-8") as fh:
 setup(
     name="ExGasRL",
     version="0.1.0",
-    author="Your Name",
+    author="Sourena Khanzadeh",
     author_email="sourena.khanzadeh@gmail.com",
     description="Explainable AI framework with heuristic search for Solidity gas optimization",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/yourusername/gas-optimization-xai-search",
+    url="https://github.com/skhanzad/ExGasRL",
     packages=find_packages(where="src"),
     package_dir={"": "src"},
     classifiers=[
