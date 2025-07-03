@@ -8,7 +8,7 @@ class LunarLandingAgent:
         self.env = gym.make(env_name)  # Non-rendering env for training
         self.eval_env = gym.make(env_name, render_mode=render_mode) if render_mode else None
 
-        self.q_table = defaultdict(lambda: np.zeros(self.env.action_space.n))
+        self.q_table = defaultdict(lambda: np.zeros(self.env.action_space.n))  # type: ignore
         self.alpha = 0.1  # Learning rate
         self.gamma = 0.99  # Discount factor
         self.epsilon = 0.1  # Exploration rate
@@ -56,14 +56,14 @@ class LunarLandingAgent:
         for episode in range(episodes):
             state, _ = self.eval_env.reset()
             done = False
-            total_reward = 0
+            total_reward = 0.0
 
             while not done:
                 state_key = self.discretize(state)
                 action = np.argmax(self.q_table[state_key])
                 next_state, reward, terminated, truncated, _ = self.eval_env.step(action)
                 done = terminated or truncated
-                total_reward += reward
+                total_reward += float(reward)
                 state = next_state
 
             print(f"Episode {episode + 1}, Total Reward: {total_reward}")
