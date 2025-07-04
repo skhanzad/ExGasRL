@@ -4,6 +4,7 @@ use heuristic_search::{
 };
 use std::collections::HashMap;
 use std::sync::Arc;
+use heuristic_search::query_lunarlander_model;
 
 /// Example: 8-puzzle problem
 fn create_8_puzzle_problem() -> SearchProblem {
@@ -187,6 +188,16 @@ fn run_search_example(problem: SearchProblem, algorithm_name: &str) {
     }
 }
 
+fn explain_search_path(states: &[Vec<f32>]) {
+    for (i, state) in states.iter().enumerate() {
+        let model_out = query_lunarlander_model(state);
+        println!(
+            "Step {}: State={:?}, Action={}, Q-values={:?}",
+            i, state, model_out.action, model_out.q_values
+        );
+    }
+}
+
 fn main() {
     println!("🚀 Heuristic Search Algorithms Demo");
     println!("=====================================");
@@ -226,6 +237,13 @@ fn main() {
             println!("  {}: {} -> {}", i + 1, action, state);
         }
     }
+
+    // Example: explain a dummy path
+    let states = vec![
+        vec![0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7],
+        vec![0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8],
+    ];
+    explain_search_path(&states);
 
     println!("\n✅ Demo completed!");
 }
