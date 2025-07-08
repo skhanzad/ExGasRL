@@ -22,6 +22,7 @@ set(SOURCES
     src/ida_star.cpp
     src/grid_world.cpp
     src/puzzle_state.cpp
+    src/neural_network_path.cpp
 )
 
 # Header files
@@ -34,6 +35,7 @@ set(HEADERS
     include/ida_star.h
     include/grid_world.h
     include/puzzle_state.h
+    include/neural_network_path.h
 )
 
 # Create library
@@ -43,13 +45,22 @@ add_library(heuristic_search STATIC ${SOURCES} ${HEADERS})
 add_executable(search_example examples/search_example.cpp)
 target_link_libraries(search_example heuristic_search)
 
+# Create executable for neural network examples
+add_executable(neural_network_example examples/neural_network_example.cpp)
+target_link_libraries(neural_network_example heuristic_search)
+
 # Create executable for tests
 add_executable(search_tests tests/test_search.cpp)
 target_link_libraries(search_tests heuristic_search)
 
+# Create executable for neural network tests
+add_executable(neural_network_tests tests/test_neural_network.cpp)
+target_link_libraries(neural_network_tests heuristic_search)
+
 # Enable testing
 enable_testing()
 add_test(NAME SearchTests COMMAND search_tests)
+add_test(NAME NeuralNetworkTests COMMAND neural_network_tests)
 
 # Installation
 install(TARGETS heuristic_search

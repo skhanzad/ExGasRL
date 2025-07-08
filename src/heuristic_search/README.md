@@ -14,6 +14,7 @@ A comprehensive C++ framework for implementing and comparing various heuristic s
 ### Problem Domains
 - **GridWorld** - 2D grid-based pathfinding with obstacles and terrain costs
 - **PuzzleState** - Sliding puzzle problems (8-puzzle, 15-puzzle, etc.)
+- **NeuralNetworkPath** - Neural network pathfinding from input to output nodes
 
 ### Heuristic Functions
 - Manhattan Distance
@@ -84,6 +85,7 @@ make test
 
 # Run examples
 ./bin/search_example
+./bin/neural_network_example
 ```
 
 ## Usage Examples
@@ -142,6 +144,48 @@ if (result.success) {
 }
 ```
 
+### Neural Network Pathfinding
+
+```cpp
+#include "neural_network_path.h"
+#include "astar.h"
+
+// Create a neural network
+NeuralNetworkPath network("my_network");
+
+// Create a feedforward network: 3 input -> 4 hidden -> 2 output
+network.createFeedforwardNetwork(3, {4}, 2, {-1.0, 1.0});
+
+// Set optimization objective
+network.setObjective(NeuralNetworkPath::MAX_ACTIVATION);
+
+// Get functions for search
+auto successor_func = network.getSuccessorFunction();
+auto heuristic_func = network.getHeuristicFunction();
+
+// Create A* algorithm
+AStar astar(heuristic_func, successor_func);
+
+// Find path from input to output
+auto input_nodes = network.getInputNodes();
+auto output_nodes = network.getOutputNodes();
+auto result = astar.search(input_nodes[0], output_nodes[0]);
+
+if (result.success) {
+    // Calculate path metrics
+    std::vector<std::string> path_nodes = {input_nodes[0]};
+    for (const auto& action : result.path) {
+        path_nodes.push_back(action);
+    }
+    
+    double activation = network.calculatePathActivation(path_nodes);
+    double cost = network.calculatePathCost(path_nodes);
+    
+    std::cout << "Path found with activation: " << activation << std::endl;
+    std::cout << "Path cost: " << cost << std::endl;
+}
+```
+
 ### Custom Problem Domain
 
 ```cpp
@@ -171,6 +215,31 @@ auto result = astar.search("start", "goal");
 | Best-First | No | Yes | O(b^d) | O(b^d) | Fast approximate solutions |
 | Greedy Best-First | No | No | O(b^d) | O(b^d) | Very fast, may not find solution |
 | IDA* | Yes | Yes | O(d) | O(b^d) | Memory-constrained environments |
+
+## Neural Network Pathfinding Features
+
+### Network Types
+- **Feedforward Networks**: Standard layered networks with forward connections
+- **Recurrent Networks**: Networks with feedback connections
+- **Custom Networks**: Manually defined layer structures and connections
+
+### Optimization Objectives
+- **MIN_LENGTH**: Find shortest path from input to output
+- **MAX_ACTIVATION**: Find path with maximum activation strength
+- **MIN_COST**: Find path with minimum computational cost
+- **MAX_DIVERSITY**: Find path that visits diverse layers
+- **BALANCED**: Balance between path length and activation
+
+### Path Analysis
+- **Activation Strength**: Product of connection weights along path
+- **Computational Cost**: Sum of absolute connection weights
+- **Path Diversity**: Ratio of unique layers visited to total layers
+- **Network Statistics**: Comprehensive analysis of network structure
+
+### File I/O Support
+- Save/load network structures to/from text files
+- Preserve layer structure, connections, and weights
+- Support for network sharing and persistence
 
 ## Performance Considerations
 
@@ -251,6 +320,7 @@ Tests cover:
 - Node operations and path reconstruction
 - Grid world functionality
 - Puzzle state operations
+- Neural network pathfinding
 - All search algorithms
 - Heuristic functions
 - Edge cases and error conditions
@@ -261,6 +331,7 @@ The framework includes several example programs:
 
 - **Grid World Pathfinding**: Demonstrates pathfinding in 2D grids
 - **8-Puzzle Solving**: Shows how to solve sliding puzzles
+- **Neural Network Pathfinding**: Demonstrates finding paths through neural networks
 - **Performance Comparison**: Compares different algorithms
 - **Custom Problems**: Shows how to implement new problem domains
 
