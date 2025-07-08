@@ -53,6 +53,7 @@ Thumbs.db
 # Solidity compilation artifacts
 build/
 cache/
+.cache/
 artifacts/
 
 # Miscellaneous
