@@ -1,193 +1,283 @@
-# Heuristic Search Algorithms in Rust
+# Heuristic Search Framework
 
-A comprehensive implementation of search algorithms including A*, Breadth-First Search, and Depth-First Search, designed for gas optimization and general problem-solving.
+A comprehensive C++ framework for implementing and comparing various heuristic search algorithms. This framework provides a flexible and extensible architecture for solving pathfinding and optimization problems.
 
 ## Features
 
-- **A* Search**: Optimal pathfinding with heuristic guidance
-- **Breadth-First Search**: Complete search for shortest path
-- **Depth-First Search**: Memory-efficient search for deep solutions
-- **Multiple Heuristics**: Manhattan, Euclidean, Zero, and Gas Optimization
-- **Extensible Framework**: Easy to add new algorithms and heuristics
-- **Performance Tracking**: Detailed statistics on search performance
+### Search Algorithms
+- **A*** - Optimal informed search with heuristic guidance
+- **Dijkstra's Algorithm** - Optimal uninformed search for shortest paths
+- **Best-First Search** - Informed search using heuristic values
+- **IDA*** - Memory-efficient iterative deepening A*
+- **Greedy Best-First Search** - Fast but potentially suboptimal search
 
-## Project Structure
+### Problem Domains
+- **GridWorld** - 2D grid-based pathfinding with obstacles and terrain costs
+- **PuzzleState** - Sliding puzzle problems (8-puzzle, 15-puzzle, etc.)
 
-```
-src/
-├── lib.rs              # Module declarations and exports
-├── main.rs             # Demo and examples
-├── search_node.rs      # Core data structures (State, SearchNode)
-├── heuristics.rs       # Heuristic function implementations
-├── base_search.rs      # Base search framework and traits
-└── astar_search.rs     # A*, BFS, and DFS implementations
-```
+### Heuristic Functions
+- Manhattan Distance
+- Euclidean Distance
+- Hamming Distance
+- Misplaced Tiles (for puzzles)
+- Linear Conflicts (for puzzles)
+- Zero Heuristic (for Dijkstra's)
 
-## Quick Start
+## Architecture
 
-### Building and Running
+### Core Components
 
-```bash
-cd src/heuristic_search
-cargo build
-cargo run
-```
-
-### Basic Usage
-
-```rust
-use heuristic_search::{
-    AStarSearch, SearchProblem, State, HeuristicFactory
+#### Node Class
+```cpp
+class Node {
+    std::string state_;      // State representation
+    double g_cost_;          // Cost from start to this node
+    double h_cost_;          // Heuristic cost to goal
+    NodePtr parent_;         // Parent node for path reconstruction
+    std::string action_;     // Action that led to this node
 };
+```
 
-// Create a problem
-let problem = SearchProblem::new(
-    start_state,
-    goal_state,
-    actions,
-    step_cost_fn,
-    successor_fn,
-    goal_test_fn,
-);
+#### SearchAlgorithm Base Class
+```cpp
+class SearchAlgorithm {
+    HeuristicFunction heuristic_;    // Heuristic function
+    SuccessorFunction successor_;    // Successor generation function
+    size_t max_nodes_;              // Maximum nodes to expand
+    
+    virtual SearchResult search(const std::string& start, const std::string& goal);
+};
+```
 
-// Create heuristic
-let heuristic = HeuristicFactory::create("manhattan", None);
+#### SearchResult Structure
+```cpp
+struct SearchResult {
+    bool success;                    // Whether a path was found
+    std::vector<std::string> path;  // Sequence of actions
+    double path_cost;               // Total path cost
+    size_t nodes_expanded;          // Number of nodes expanded
+    size_t nodes_generated;         // Number of nodes generated
+    double execution_time_ms;       // Execution time in milliseconds
+};
+```
 
-// Run A* search
-let mut astar = AStarSearch::new(problem, heuristic);
-let result = astar.search(start_state, goal_state);
+## Building the Framework
 
-if result.success {
-    println!("Found solution with cost: {}", result.total_cost);
-    println!("Path: {:?}", result.path);
+### Prerequisites
+- CMake 3.16 or higher
+- C++17 compatible compiler
+- Make or Ninja build system
+
+### Build Instructions
+```bash
+# Create build directory
+mkdir build && cd build
+
+# Configure with CMake
+cmake ..
+
+# Build the project
+make
+
+# Run tests
+make test
+
+# Run examples
+./bin/search_example
+```
+
+## Usage Examples
+
+### Grid World Pathfinding
+
+```cpp
+#include "grid_world.h"
+#include "astar.h"
+
+// Create a grid world
+GridWorld world(10, 10);
+
+// Add obstacles
+world.setCell(3, 3, GridWorld::WALL);
+world.setCell(4, 4, GridWorld::WATER);
+
+// Get functions for search
+auto successor_func = world.getSuccessorFunction();
+auto heuristic = world.getManhattanHeuristic();
+
+// Create A* algorithm
+AStar astar(heuristic, successor_func);
+
+// Perform search
+auto result = astar.search("0,0", "9,9");
+
+if (result.success) {
+    std::cout << "Path found! Cost: " << result.path_cost << std::endl;
+    for (const auto& action : result.path) {
+        std::cout << action << " ";
+    }
 }
 ```
 
-## Algorithms
+### 8-Puzzle Solving
 
-### A* Search
-- **Optimal**: Guarantees shortest path when heuristic is admissible
-- **Efficient**: Uses priority queue with f-value (g + h)
-- **Best for**: Pathfinding, optimization problems
+```cpp
+#include "puzzle_state.h"
+#include "astar.h"
 
-### Breadth-First Search
-- **Complete**: Guarantees finding solution if it exists
-- **Optimal**: Finds shortest path in terms of steps
-- **Best for**: Unweighted graphs, shortest path problems
+// Create puzzle states
+PuzzleState start_state = PuzzleState::createRandomState(3, 20);
+PuzzleState goal_state = PuzzleState::createSolvedState(3);
 
-### Depth-First Search
-- **Memory Efficient**: Uses stack instead of queue
-- **Fast**: May find solution quickly in deep search spaces
-- **Best for**: Deep search spaces, constraint satisfaction
+// Get functions
+auto successor_func = PuzzleState::getSuccessorFunction();
+auto heuristic = PuzzleState::getManhattanHeuristic();
 
-## Heuristics
+// Solve with A*
+AStar astar(heuristic, successor_func);
+auto result = astar.search(start_state.toString(), goal_state.toString());
 
-### Manhattan Distance
-```rust
-let heuristic = HeuristicFactory::create("manhattan", None);
-```
-- Sum of absolute differences across all dimensions
-- Admissible for grid-based problems
-
-### Euclidean Distance
-```rust
-let heuristic = HeuristicFactory::create("euclidean", None);
-```
-- Square root of sum of squared differences
-- Admissible for continuous spaces
-
-### Gas Optimization
-```rust
-let mut params = HashMap::new();
-params.insert("target_gas".to_string(), 50000.0);
-let heuristic = HeuristicFactory::create("gas_optimization", Some(params));
-```
-- Specialized for gas optimization problems
-- Penalizes higher gas usage
-
-### Zero Heuristic
-```rust
-let heuristic = HeuristicFactory::create("zero", None);
-```
-- Returns 0 for all states
-- Equivalent to uniform cost search
-
-## Examples
-
-### 8-Puzzle Problem
-The classic sliding tile puzzle with 9 positions and one empty space.
-
-```rust
-let puzzle_problem = create_8_puzzle_problem();
-let mut astar = AStarSearch::new(puzzle_problem, heuristic);
-let result = astar.search(start_state, goal_state);
+if (result.success) {
+    std::cout << "Puzzle solved in " << result.path.size() << " moves" << std::endl;
+}
 ```
 
-### Gas Optimization
-Optimize smart contract gas usage through various techniques.
+### Custom Problem Domain
 
-```rust
-let gas_problem = create_gas_optimization_problem();
-let gas_heuristic = HeuristicFactory::create("gas_optimization", Some(params));
-let mut astar = AStarSearch::new(gas_problem, gas_heuristic);
-let result = astar.search(start_state, goal_state);
+```cpp
+// Define your own successor function
+auto my_successor = [](const std::string& state) -> std::vector<std::pair<std::string, double>> {
+    // Generate successors for your problem
+    return {{"successor1", 1.0}, {"successor2", 2.0}};
+};
+
+// Define your own heuristic function
+auto my_heuristic = [](const std::string& state, const std::string& goal) -> double {
+    // Estimate cost from state to goal
+    return 0.0; // Replace with actual heuristic
+};
+
+// Use with any search algorithm
+AStar astar(my_heuristic, my_successor);
+auto result = astar.search("start", "goal");
 ```
 
-## Performance
+## Algorithm Comparison
 
-The implementation includes comprehensive performance tracking:
+| Algorithm | Optimal | Complete | Memory | Time | Use Case |
+|-----------|---------|----------|--------|------|----------|
+| A* | Yes | Yes | O(b^d) | O(b^d) | General optimal search |
+| Dijkstra | Yes | Yes | O(V) | O(V log V) | Shortest paths |
+| Best-First | No | Yes | O(b^d) | O(b^d) | Fast approximate solutions |
+| Greedy Best-First | No | No | O(b^d) | O(b^d) | Very fast, may not find solution |
+| IDA* | Yes | Yes | O(d) | O(b^d) | Memory-constrained environments |
 
-- **Nodes Expanded**: Number of nodes processed
-- **Nodes Generated**: Total nodes created
-- **Max Depth**: Maximum search depth reached
-- **Path Length**: Number of steps in solution
-- **Total Cost**: Cumulative cost of solution path
+## Performance Considerations
+
+### Memory Usage
+- **A*** and **Best-First**: Store all expanded nodes in memory
+- **IDA***: Only stores current path, very memory efficient
+- **Dijkstra**: Stores all visited nodes with distances
+
+### Time Complexity
+- All algorithms: O(b^d) in worst case
+- **A*** with good heuristic: Much better than uninformed search
+- **IDA***: May re-expand nodes, but uses minimal memory
+
+### Heuristic Quality
+- **Admissible**: Never overestimates (guarantees optimality for A*)
+- **Consistent**: Monotonic (A* never re-expands nodes)
+- **Better heuristics**: Reduce search space significantly
 
 ## Extending the Framework
 
-### Adding New Heuristics
-
-```rust
-pub struct CustomHeuristic;
-
-impl Heuristic for CustomHeuristic {
-    fn evaluate(&self, state: &State, goal: &State) -> f64 {
-        // Your heuristic logic here
-        0.0
-    }
-
-    fn name(&self) -> &str {
-        "custom"
-    }
-}
-```
-
 ### Adding New Search Algorithms
 
-```rust
-pub struct CustomSearch {
-    base: BaseSearch,
-    // Additional fields
-}
+1. Inherit from `SearchAlgorithm`
+2. Override the `search` method
+3. Implement your algorithm logic
 
-impl SearchAlgorithm for CustomSearch {
-    fn search(&mut self, start: State, goal: State) -> SearchResult {
-        // Your search logic here
-        SearchResult::new()
+```cpp
+class MySearchAlgorithm : public SearchAlgorithm {
+public:
+    MySearchAlgorithm(HeuristicFunction h, SuccessorFunction s)
+        : SearchAlgorithm(h, s) {}
+    
+    SearchResult search(const std::string& start, const std::string& goal) override {
+        // Your algorithm implementation
     }
+};
+```
 
-    fn get_stats(&self) -> &SearchStats {
-        self.base.get_stats()
-    }
+### Adding New Problem Domains
+
+1. Create a class for your problem
+2. Implement state representation
+3. Provide successor and heuristic functions
+
+```cpp
+class MyProblem {
+public:
+    static SuccessorFunction getSuccessorFunction();
+    static HeuristicFunction getHeuristic();
+    std::string toString() const;
+    static MyProblem fromString(const std::string& str);
+};
+```
+
+### Adding New Heuristics
+
+```cpp
+// In heuristics namespace
+Node::CostType myHeuristic(const std::string& state, const std::string& goal) {
+    // Your heuristic implementation
+    return estimated_cost;
 }
 ```
 
-## Dependencies
+## Testing
 
-- `priority-queue`: For A* priority queue implementation
-- `serde`: For serialization/deserialization support
-- `serde_json`: For JSON serialization
+The framework includes comprehensive tests for all components:
+
+```bash
+# Run all tests
+make test
+
+# Run specific test
+./bin/search_tests
+```
+
+Tests cover:
+- Node operations and path reconstruction
+- Grid world functionality
+- Puzzle state operations
+- All search algorithms
+- Heuristic functions
+- Edge cases and error conditions
+
+## Examples
+
+The framework includes several example programs:
+
+- **Grid World Pathfinding**: Demonstrates pathfinding in 2D grids
+- **8-Puzzle Solving**: Shows how to solve sliding puzzles
+- **Performance Comparison**: Compares different algorithms
+- **Custom Problems**: Shows how to implement new problem domains
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Add tests for new functionality
+4. Ensure all tests pass
+5. Submit a pull request
 
 ## License
 
-This project is part of the ExGasRL framework for gas optimization research. 
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## References
+
+- Russell, S., & Norvig, P. (2010). Artificial Intelligence: A Modern Approach
+- Hart, P. E., Nilsson, N. J., & Raphael, B. (1968). A formal basis for the heuristic determination of minimum cost paths
+- Korf, R. E. (1985). Depth-first iterative-deepening: An optimal admissible tree search 
